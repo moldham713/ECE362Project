@@ -87,9 +87,23 @@ void init_tim6()
     TIM6->CR1 |= 1;
     TIM6->DIER |= 1;
     NVIC->ISER[0] |= 1 << (TIM6_DAC_IRQn);
+    NVIC->IP[4]= 0x0000ff00; //Timer 6 has lower priority than timer 3
 }
 
+void init_tim3()
+{
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+	TIM3->PSC = 16000-1;
+	TIM3->ARR = 100-1;
+	TIM3->CR1 |= 1;
+	TIM3->DIER |= 1;
+	NVIC->ISER[0] |= 1 << (TIM3_IRQn);
+}
 
+/*
+ * The timer 6 interrupt handler updates the display 2 lines at a time using
+ * the data in imagedata
+ */
 void TIM6_DAC_IRQHandler()
 {
 	static int imageline = 0;
@@ -119,24 +133,36 @@ void TIM6_DAC_IRQHandler()
     TIM6->SR &= !(1);
 }
 
+void TIM3_IRQHandler()
+{
+	static int state = 0;
+	switch(state)
+	{
+	case 0:
+	{
+		init_picture();
+		break;
+	}
+	case 1:
+	{
+		picture_blank();
+		break;
+	}
+	case 2:
+	{
+		picture_blank();
+		break;
+	}
+	state = (state + 1) % 3;
+	TIM3->SR &= ~(1);
+}
+
 int main(void)
 {
 	init_picture();
 	init_GPIO();
 	init_tim6();
+	init_tim3()
 
-	while(1)
-	{
-		init_picture();
-		for(int i = 0; i < 480; i++)
-		{
-			asm("nop");
-		}
-		picture_red();
-		for(int i = 0; i < 480; i++)
-		{
-			asm("nop");
-		}
-	}
-
+	while(1);
 }
