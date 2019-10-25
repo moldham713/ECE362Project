@@ -34,6 +34,7 @@
 
 #include "stm32f0xx.h"
 #include "stm32f0_discovery.h"
+#include "imagedata.h"
 
 unsigned char  imagedata[32*3*16] = {0};
 
@@ -63,15 +64,33 @@ void picture_blank()
 
 void picture_red()
 {
+	for(int y = 0; y < 16; y++)
+	{
+		for(int x = 0; x < 32*3; x++)
+		{
+			if(x % 3 == 1 || x % 3 == 2)
+				imagedata[(32*3*y)+x] = 1;
+			else
+				imagedata[(32*3*y)+x] = 0;
+		}
+	}
+}
+
+
+void load_picture()
+{
+
 	for(int x = 0; x < 32*3; x++)
 	{
 		for(int y = 0; y < 16; y++)
 		{
-			if(x % 3 == 0) imagedata[(32*3*y)+x] = 1;
-			else imagedata[(32*3*y)+x] = 0;
+			imagedata[(32*3*y)+x] = bgimagedata[(32*3*y)+x];
 		}
 	}
+
+
 }
+
 
 void init_GPIO()
 {
@@ -83,7 +102,7 @@ void init_tim6()
 {
 	RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
     TIM6->PSC = 10-1;
-    TIM6->ARR = 10-1;
+    TIM6->ARR = 5-1;
     TIM6->CR1 |= 1;
     TIM6->DIER |= 1;
     NVIC->ISER[0] |= 1 << (TIM6_DAC_IRQn);
@@ -94,7 +113,7 @@ void init_tim3()
 {
 	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 	TIM3->PSC = 16000-1;
-	TIM3->ARR = 100-1;
+	TIM3->ARR = 10000-1;
 	TIM3->CR1 |= 1;
 	TIM3->DIER |= 1;
 	NVIC->ISER[0] |= 1 << (TIM3_IRQn);
@@ -112,7 +131,7 @@ void TIM6_DAC_IRQHandler()
 	GPIOA->ODR |= (imageline & 1) << 9;
 	GPIOA->ODR |= ((imageline & 2) >> 1) << 10;
 	GPIOA->ODR |= ((imageline & 4) >> 2) << 11;
-    for(int x = 0; x < 32; x++)
+    for(int x = 0; x < 32*3; x+=3)
     {
     	GPIOA->ODR &= ~(0x1f8); //clear bits 3-8 for RGB
     	GPIOA->ODR |= (1 & (imagedata[(imageline *3 * 32)+x])) << 3;
@@ -140,29 +159,33 @@ void TIM3_IRQHandler()
 	{
 	case 0:
 	{
-		init_picture();
+		load_picture();
 		break;
 	}
 	case 1:
 	{
-		picture_blank();
+		load_picture();
 		break;
 	}
 	case 2:
 	{
-		picture_blank();
+		load_picture();
 		break;
+	}
 	}
 	state = (state + 1) % 3;
 	TIM3->SR &= ~(1);
 }
 
+
 int main(void)
 {
-	init_picture();
+	picture_blank();
 	init_GPIO();
 	init_tim6();
-	init_tim3()
+	init_tim3();
 
-	while(1);
+	while(1){
+		asm("nop");
+	}
 }
