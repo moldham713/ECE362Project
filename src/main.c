@@ -35,21 +35,10 @@
 #include "stm32f0xx.h"
 #include "stm32f0_discovery.h"
 #include "imagedata.h"
+#include <string.h>
 
 unsigned char  imagedata[32*3*16] = {0};
 
-
-
-void init_picture()
-{
-	for(int x = 0; x < 32*3; x++)
-	{
-		for(int y = 0; y < 16; y++)
-		{
-			imagedata[(32*3*y)+x] = 1;
-		}
-	}
-}
 
 void picture_blank()
 {
@@ -62,33 +51,27 @@ void picture_blank()
 	}
 }
 
-void picture_red()
+
+void load_bg()
 {
-	for(int y = 0; y < 16; y++)
-	{
-		for(int x = 0; x < 32*3; x++)
-		{
-			if(x % 3 == 1 || x % 3 == 2)
-				imagedata[(32*3*y)+x] = 1;
-			else
-				imagedata[(32*3*y)+x] = 0;
-		}
-	}
+	memcpy(imagedata, bgimagedata, 32*16*3);
 }
 
-
-void load_picture()
+void printSprite(int spritenum, int x, int y)
 {
-
-	for(int x = 0; x < 32*3; x++)
+	switch(spritenum)
 	{
-		for(int y = 0; y < 16; y++)
+	case 0:
+	{
+
+		for(int i = 0; i < 8; i++)
 		{
-			imagedata[(32*3*y)+x] = bgimagedata[(32*3*y)+x];
+			memcpy(&imagedata[(32*3*(y+i))+x], &heartsprite[8*3*i], 8*3);
 		}
+
+		break;
 	}
-
-
+	}
 }
 
 
@@ -112,8 +95,8 @@ void init_tim6()
 void init_tim3()
 {
 	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
-	TIM3->PSC = 16000-1;
-	TIM3->ARR = 10000-1;
+	TIM3->PSC = 8000-1;
+	TIM3->ARR = 100-1;
 	TIM3->CR1 |= 1;
 	TIM3->DIER |= 1;
 	NVIC->ISER[0] |= 1 << (TIM3_IRQn);
@@ -154,27 +137,20 @@ void TIM6_DAC_IRQHandler()
 
 void TIM3_IRQHandler()
 {
-	static int state = 0;
-	switch(state)
-	{
-	case 0:
-	{
-		load_picture();
-		break;
-	}
-	case 1:
-	{
-		load_picture();
-		break;
-	}
-	case 2:
-	{
-		load_picture();
-		break;
-	}
-	}
-	state = (state + 1) % 3;
+
+	int sprite1 = 0;
+	int sprite2 = 0;
+	int sprite3 = 0;
+	static int yshift = 4;
+
+	load_bg();
+	printSprite(sprite1, 2*3, yshift);
+	printSprite(sprite2, 12*3, yshift);
+	printSprite(sprite3, 22*3, yshift);
+	yshift += 0;
+	if(yshift > 16) yshift = 0;
 	TIM3->SR &= ~(1);
+
 }
 
 
