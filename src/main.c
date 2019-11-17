@@ -71,6 +71,11 @@ void printSprite(int spritenum, int x, int y)
 
 		break;
 	}
+	case 1:
+		for(int i = 0; i < 8; i++)
+		{
+			memcpy(&imagedata[(32*3*(y+i))+x], &coinsprite[8*3*i], 8*3);
+		}
 	}
 }
 
@@ -139,7 +144,7 @@ void TIM3_IRQHandler()
 {
 
 	int sprite1 = 0;
-	int sprite2 = 0;
+	int sprite2 = 1;
 	int sprite3 = 0;
 	static int yshift = 4;
 
@@ -147,7 +152,7 @@ void TIM3_IRQHandler()
 	printSprite(sprite1, 2*3, yshift);
 	printSprite(sprite2, 12*3, yshift);
 	printSprite(sprite3, 22*3, yshift);
-	yshift += 0;
+	yshift += 1;
 	if(yshift > 16) yshift = 0;
 	TIM3->SR &= ~(1);
 
