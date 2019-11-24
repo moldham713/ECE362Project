@@ -36,7 +36,7 @@
 #include "stm32f0xx.h"
 #include "stm32f0_discovery.h"
 #include "imagedata.h"
-#define WIN_CHANCE 10
+#define WIN_CHANCE 5
 #define NUM_SPRITES 6
 
 unsigned char  imagedata[32*3*16] = {0};
@@ -46,17 +46,6 @@ int winsprite = 0;
 int losesprite1 = 0;
 int losesprite2 = 0;
 int buttondown = 0;
-
-void picture_blank()
-{
-    for(int x = 0; x < 32*3; x++)
-    {
-        for(int y = 0; y < 16; y++)
-        {
-            imagedata[(32*3*y)+x] = 0;
-        }
-    }
-}
 
 
 void load_bg()
@@ -261,7 +250,6 @@ void TIM3_IRQHandler()
 
 int main(void)
 {
-    picture_blank();
     init_GPIO();
     init_tim6();
     init_tim3();
