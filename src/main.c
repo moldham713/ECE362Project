@@ -31,14 +31,17 @@
  * CLK  LAT
  * OE   GND
  */
-
+#include <string.h>
+#include <stdlib.h>
 #include "stm32f0xx.h"
 #include "stm32f0_discovery.h"
 #include "imagedata.h"
-#include <string.h>
+#define WIN_CHANCE 10
 
 unsigned char  imagedata[32*3*16] = {0};
-
+int scrolling = 1;
+int won = 0;
+int winsprite = 0;
 
 void picture_blank()
 {
@@ -62,7 +65,6 @@ void printSprite(int spritenum, int x, int y)
 	switch(spritenum)
 	{
 	case 0:
-	{
 
 		for(int i = 0; i < 8; i++)
 		{
@@ -70,12 +72,45 @@ void printSprite(int spritenum, int x, int y)
 		}
 
 		break;
-	}
+
 	case 1:
 		for(int i = 0; i < 8; i++)
 		{
 			memcpy(&imagedata[(32*3*(y+i))+x], &coinsprite[8*3*i], 8*3);
 		}
+		break;
+
+	case 2:
+		for(int i = 0; i < 8; i++)
+		{
+			memcpy(&imagedata[(32*3*(y+i))+x], &bananasprite[8*3*i], 8*3);
+		}
+		break;
+
+
+	case 3:
+		for(int i = 0; i < 8; i++)
+		{
+			memcpy(&imagedata[(32*3*(y+i))+x], &sevensprite[8*3*i], 8*3);
+		}
+		break;
+
+
+	case 4:
+		for(int i = 0; i < 8; i++)
+		{
+			memcpy(&imagedata[(32*3*(y+i))+x], &snowsprite[8*3*i], 8*3);
+		}
+		break;
+
+
+	case 5:
+		for(int i = 0; i < 8; i++)
+		{
+			memcpy(&imagedata[(32*3*(y+i))+x], &targetsprite[8*3*i], 8*3);
+		}
+		break;
+
 	}
 }
 
@@ -86,25 +121,35 @@ void init_GPIO()
 	GPIOA->MODER |= 0x555555;
 }
 
-void init_tim6()
+void init_tim6() //display timer
 {
 	RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
-    TIM6->PSC = 10-1;
-    TIM6->ARR = 5-1;
+    TIM6->PSC =8-1;
+    TIM6->ARR = 4-1;
     TIM6->CR1 |= 1;
     TIM6->DIER |= 1;
     NVIC->ISER[0] |= 1 << (TIM6_DAC_IRQn);
     NVIC->IP[4]= 0x0000ff00; //Timer 6 has lower priority than timer 3
 }
 
-void init_tim3()
+void init_tim3() //picture update timer
 {
 	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
-	TIM3->PSC = 8000-1;
+	TIM3->PSC = 6000-1;
 	TIM3->ARR = 100-1;
 	TIM3->CR1 |= 1;
 	TIM3->DIER |= 1;
 	NVIC->ISER[0] |= 1 << (TIM3_IRQn);
+}
+
+void init_tim2() //state timer
+{
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+	TIM2->PSC = 0xffff;
+	TIM2->ARR = 0x0fff;
+	TIM2->CR1 |= 1;
+	TIM2->DIER |= 1;
+	NVIC->ISER[0] |= 1 << (TIM2_IRQn);
 }
 
 /*
@@ -137,24 +182,60 @@ void TIM6_DAC_IRQHandler()
     GPIOA->ODR &= ~(1);
     imageline +=1;
     if(imageline > 7) imageline = 0;
-    TIM6->SR &= !(1);
+    TIM6->SR &= !1;
+}
+
+void TIM2_IRQHandler()
+{
+	scrolling = !scrolling;
+	won = rand() % WIN_CHANCE == 1;
+	winsprite = rand() % 6;
+	TIM2->SR &= ~TIM_SR_UIF;
 }
 
 void TIM3_IRQHandler()
 {
+	if(scrolling)
+	{
+		int sprite1 = rand() % 6;
+		int sprite2 = rand() % 6;
+		int sprite3 = rand() % 6;
+		static int yshift = 4;
 
-	int sprite1 = 0;
-	int sprite2 = 1;
-	int sprite3 = 0;
-	static int yshift = 4;
 
-	load_bg();
-	printSprite(sprite1, 2*3, yshift);
-	printSprite(sprite2, 12*3, yshift);
-	printSprite(sprite3, 22*3, yshift);
-	yshift += 1;
-	if(yshift > 16) yshift = 0;
+		load_bg();
+		printSprite(sprite1, 2*3, yshift);
+		printSprite(sprite2, 12*3, yshift);
+		printSprite(sprite3, 22*3, yshift);
+
+		yshift += 1;
+
+		if(yshift > 7) yshift = 1;
+	}
+
+	else
+	{
+		load_bg();
+		if(won)
+		{
+			printSprite(winsprite, 2*3, 4);
+			printSprite(winsprite, 12*3, 4);
+			printSprite(winsprite, 22*3, 4);
+
+		}
+		else
+		{
+			printSprite(winsprite, 2*3, 4);
+			printSprite((winsprite + 1) % 6, 12*3, 4);
+			printSprite((winsprite + 2) % 6, 22*3, 4);
+		}
+	}
+
+
+
 	TIM3->SR &= ~(1);
+
+
 
 }
 
@@ -165,6 +246,7 @@ int main(void)
 	init_GPIO();
 	init_tim6();
 	init_tim3();
+	init_tim2();
 
 	while(1){
 		asm("nop");
