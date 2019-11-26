@@ -12,7 +12,7 @@
  * A1: CLK
  * A2: LATCH
  * A3: R1
- * A4: G1
+ * A12: G1
  * A5: B1
  * A6: R2
  * A7: G2
@@ -111,7 +111,7 @@ void printSprite(int spritenum, int x, int y)
 void init_GPIO()
 {
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
-    GPIOA->MODER |= 0x555555;
+    GPIOA->MODER |= 0x1555555;
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
     GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_1;
 }
@@ -163,9 +163,9 @@ void TIM6_DAC_IRQHandler()
     GPIOA->ODR |= ((imageline & 4) >> 2) << 11;
     for(int x = 0; x < 32*3; x+=3)
     {
-        GPIOA->ODR &= ~(0x1f8); //clear bits 3-8 for RGB
+        GPIOA->ODR &= ~(0x11e8); //clear bits 3-8 for RGB
         GPIOA->ODR |= (1 & (imagedata[(imageline *3 * 32)+x])) << 3;
-        GPIOA->ODR |= (1 & (imagedata[(imageline *3 * 32)+x+1])) << 4;
+        GPIOA->ODR |= (1 & (imagedata[(imageline *3 * 32)+x+1])) << 12;
         GPIOA->ODR |= (1 & (imagedata[(imageline *3 * 32)+x + 2])) << 5;
         GPIOA->ODR |= (1 & (imagedata[((imageline+8) *3 * 32)+x])) << 6;
         GPIOA->ODR |= (1 & (imagedata[((imageline+8) *3 * 32)+x+1])) << 7;
